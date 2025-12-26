@@ -46,12 +46,12 @@ app.get('/', (_req: Request, res: Response) => {
 /**
  * Health check endpoint.
  */
-app.get('/ping', (_req: Request, res: Response) => {
+app.get('/api/ping', (_req: Request, res: Response) => {
   res.status(200).send('pong');
 });
 
 /**
- * POST - /signup
+ * POST - /api/signup
  * Convenience endpoint to creates user, userToken, encryptionKey, and challengeId to
  * setup PIN and wallet
  *
@@ -63,7 +63,7 @@ app.get('/ping', (_req: Request, res: Response) => {
  *  encryptionKey: string - encryption key to use to execute challengeIds
  *  challengeId: string   - used to initiate a challenge flow to setup PIN + Wallet
  */
-app.post('/signup', validate(authenticationSchema), signUp);
+app.post('/api/signup', validate(authenticationSchema), signUp);
 
 /**
  * POST - /signIn
@@ -83,16 +83,16 @@ app.post('/signup', validate(authenticationSchema), signUp);
  * If user credentials wrong or don't exist:
  *  returns 404
  */
-app.post('/signin', validate(authenticationSchema), signIn);
+app.post('/api/signin', validate(authenticationSchema), signIn);
 
 /*
  * Add all sub paths
  */
-app.use('/users', usersRouter, authUserRouter);
-app.use('/tokens', tokensRouter);
-app.use('/wallets', authMiddleware, walletsRouter);
-app.use('/transactions', transactionsRouter, authTransRouter);
-app.use('/faucet', authMiddleware, faucetRouter);
+app.use('/api/users', usersRouter, authUserRouter);
+app.use('/api/tokens', tokensRouter);
+app.use('/api/wallets', authMiddleware, walletsRouter);
+app.use('/api/transactions', transactionsRouter, authTransRouter);
+app.use('/api/faucet', authMiddleware, faucetRouter);
 
 // Error handling
 app.use(errorHandler);
