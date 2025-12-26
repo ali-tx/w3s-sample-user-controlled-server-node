@@ -14,32 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { NextFunction, Request, Response } from 'express';
-
-export const authMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const bearerHeader = req.headers['authorization'];
-
-  if (!bearerHeader) {
-    return res.sendStatus(403);
-  }
-
-  const bearer = bearerHeader.split(' ');
-  const bearerToken = bearer[1];
-
-  const payload = JSON.parse(
-    Buffer.from(bearerToken.split('.')[1], 'base64').toString()
-  );
-
-  if (Date.now() > payload.exp * 1000) {
-    return res.sendStatus(403);
-  }
-
-  req.headers.token = bearerToken;
-  (req as any).userId = payload.userId; // Assuming userId is in payload
-
-  next();
+export type Transaction = {
+  id: string;
+  userId: string;
+  walletId?: string;
+  tokenId?: string;
+  destinationAddress?: string;
+  amounts?: string[];
+  transactionType: string;
+  state: string;
+  createDate: string;
+  updateDate?: string;
+  refId?: string;
+  idempotencyKey?: string;
 };

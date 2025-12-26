@@ -14,8 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { circleUserSdk } from '../services';
+import { circleUserSdk, tokenDAO } from '../services';
 import { Request, Response, NextFunction } from 'express';
+import { Token } from '../middleware';
 
 export const getTokenDetails = async (
   req: Request,
@@ -26,6 +27,21 @@ export const getTokenDetails = async (
     const response = await circleUserSdk.getToken({
       id: req.params.id
     });
+    // Store token in DB
+    if (response.data?.token) {
+      const token = response.data.token;
+      const t: Token = {
+        id: token.id,
+        blockchain: token.blockchain,
+        symbol: token.symbol,
+        name: token.name,
+        decimals: token.decimals,
+        isNative: token.isNative,
+        contractAddress: token.contractAddress,
+        updateDate: token.updateDate
+      };
+      tokenDAO.insertToken(t);
+    }
     res.status(200).send(response.data);
   } catch (error: unknown) {
     next(error);
