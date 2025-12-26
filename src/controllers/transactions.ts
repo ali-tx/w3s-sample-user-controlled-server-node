@@ -14,10 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { circleUserSdk, transactionDAO } from '../services';
+import { circleUserSdk } from '../services';
 import { Request, Response, NextFunction } from 'express';
 import { getFeeConfiguration } from '../shared/utils';
-import { Transaction } from '../middleware';
 
 export const listTransactions = async (
   req: Request,
@@ -29,25 +28,6 @@ export const listTransactions = async (
       userToken: req.headers['token'] as string,
       ...req.query
     });
-    // Store transactions in DB
-    if (response.data?.transactions) {
-      response.data.transactions.forEach((tx) => {
-        const t: Transaction = {
-          id: tx.id,
-          userId: (req as any).userId,
-          walletId: tx.walletId,
-          tokenId: tx.tokenId,
-          destinationAddress: tx.destinationAddress,
-          amounts: tx.amounts,
-          transactionType: tx.transactionType,
-          state: tx.state,
-          createDate: tx.createDate,
-          updateDate: tx.updateDate,
-          refId: tx.refId
-        };
-        transactionDAO.insertTransaction(t);
-      });
-    }
     res.status(200).send(response.data);
   } catch (error: unknown) {
     next(error);

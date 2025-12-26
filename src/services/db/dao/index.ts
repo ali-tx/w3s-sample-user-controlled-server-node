@@ -15,6 +15,3 @@
 // limitations under the License.
 
 export * from './userDAO';
-export * from './walletDAO';
-export * from './transactionDAO';
-export * from './tokenDAO';

@@ -15,9 +15,8 @@
 // limitations under the License.
 
 import { Blockchain } from '@circle-fin/user-controlled-wallets';
-import { circleUserSdk, walletDAO } from '../services';
+import { circleUserSdk } from '../services';
 import { Request, Response, NextFunction } from 'express';
-import { Wallet } from '../middleware';
 
 export const getWalletTokenBalance = async (
   req: Request,
@@ -48,22 +47,6 @@ export const listWallets = async (
       // Yup validation in the middleware allows the spread of the req.query valid.
       ...req.query
     });
-    // Store wallets in DB
-    if (response.data?.wallets) {
-      response.data.wallets.forEach((wallet) => {
-        const w: Wallet = {
-          id: wallet.id,
-          userId: (req as any).userId,
-          blockchain: wallet.blockchain,
-          address: wallet.address,
-          state: wallet.state,
-          custodyType: wallet.custodyType,
-          refId: wallet.refId,
-          createDate: wallet.createDate
-        };
-        walletDAO.insertWallet(w);
-      });
-    }
     res.status(200).send(response.data);
   } catch (error: unknown) {
     next(error);
@@ -80,21 +63,6 @@ export const getWallet = async (
       userToken: req.headers['token'] as string,
       id: req.params.id
     });
-    // Store wallet in DB
-    if (response.data?.wallet) {
-      const wallet = response.data.wallet;
-      const w: Wallet = {
-        id: wallet.id,
-        userId: (req as any).userId,
-        blockchain: wallet.blockchain,
-        address: wallet.address,
-        state: wallet.state,
-        custodyType: wallet.custodyType,
-        refId: wallet.refId,
-        createDate: wallet.createDate
-      };
-      walletDAO.insertWallet(w);
-    }
     res.status(200).send(response.data);
   } catch (error: unknown) {
     next(error);

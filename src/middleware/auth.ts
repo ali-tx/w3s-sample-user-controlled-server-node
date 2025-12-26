@@ -30,16 +30,15 @@ export const authMiddleware = (
   const bearer = bearerHeader.split(' ');
   const bearerToken = bearer[1];
 
-  const payload = JSON.parse(
+  const { exp } = JSON.parse(
     Buffer.from(bearerToken.split('.')[1], 'base64').toString()
   );
 
-  if (Date.now() > payload.exp * 1000) {
+  if (Date.now() > exp * 1000) {
     return res.sendStatus(403);
   }
 
   req.headers.token = bearerToken;
-  (req as any).userId = payload.userId; // Assuming userId is in payload
 
   next();
 };
