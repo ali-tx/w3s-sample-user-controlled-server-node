@@ -87,4 +87,3 @@ We use [Express](https://expressjs.com/) as web framework and [SQLite](https://w
 - [Circle Web3 Services Node.js SDK](https://developers.circle.com/w3s/docs/nodejs-sdk) supports User-Controlled Wallets, Developer-Controlled Wallets and Smart Contract Platform. See [Programmable Wallets](https://developers.circle.com/w3s/docs/circle-programmable-wallets-an-overview) and [Smart Contract Platform](https://developers.circle.com/w3s/docs/smart-contract-platform) to learn about these features and concepts.
 - Need help: <customer-support@circle.com>
 - Join our Discord community: <https://discord.com/invite/buildoncircle>
-# w3s-sample-user-controlled-server-node
