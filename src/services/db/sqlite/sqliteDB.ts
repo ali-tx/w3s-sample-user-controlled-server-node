@@ -15,12 +15,23 @@
 // limitations under the License.
 
 import { Database } from 'sqlite3';
-import { registerUserDAO } from '../dao';
+import {
+  registerUserDAO,
+  registerWalletDAO,
+  registerTransactionDAO,
+  registerTokenDAO
+} from '../dao';
 import { SqliteUserDAO } from './sqliteUserDAO';
+import { SqliteWalletDAO } from './sqliteWalletDAO';
+import { SqliteTransactionDAO } from './sqliteTransactionDAO';
+import { SqliteTokenDAO } from './sqliteTokenDAO';
 import { logger } from '../../logging/logger';
 
 const client = new Database(process.env.DATABASE_FILENAME ?? ':memory:');
 const userDAO = new SqliteUserDAO(client);
+const walletDAO = new SqliteWalletDAO(client);
+const transactionDAO = new SqliteTransactionDAO(client);
+const tokenDAO = new SqliteTokenDAO(client);
 
 export const createUserTable = (db: Database) => {
   db.serialize(() => {
@@ -30,10 +41,40 @@ export const createUserTable = (db: Database) => {
   });
 };
 
+export const createWalletTable = (db: Database) => {
+  db.serialize(() => {
+    db.exec(
+      'CREATE TABLE IF NOT EXISTS wallets (id TEXT PRIMARY KEY, userId TEXT, blockchain TEXT, address TEXT, state TEXT, custodyType TEXT, refId TEXT, createDate TEXT)'
+    );
+  });
+};
+
+export const createTransactionTable = (db: Database) => {
+  db.serialize(() => {
+    db.exec(
+      'CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT, walletId TEXT, tokenId TEXT, destinationAddress TEXT, amounts TEXT, transactionType TEXT, state TEXT, createDate TEXT, updateDate TEXT, refId TEXT)'
+    );
+  });
+};
+
+export const createTokenTable = (db: Database) => {
+  db.serialize(() => {
+    db.exec(
+      'CREATE TABLE IF NOT EXISTS tokens (id TEXT PRIMARY KEY, blockchain TEXT, symbol TEXT, name TEXT, decimals INTEGER, isNative INTEGER, contractAddress TEXT, updateDate TEXT)'
+    );
+  });
+};
+
 export const initDB = () => {
   registerUserDAO(userDAO);
+  registerWalletDAO(walletDAO);
+  registerTransactionDAO(transactionDAO);
+  registerTokenDAO(tokenDAO);
   createUserTable(client);
-  logger.info('Created users table');
+  createWalletTable(client);
+  createTransactionTable(client);
+  createTokenTable(client);
+  logger.info('Created database tables');
 };
 
 export const cleanupDB = () => {

@@ -14,32 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { NextFunction, Request, Response } from 'express';
+import { Transaction } from '../../../middleware';
 
-export const authMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const bearerHeader = req.headers['authorization'];
+export interface TransactionDAO {
+  getTransactionsByUserId: (
+    userId: string,
+    callback: (err: Error | null, rows: Transaction[]) => Promise<void>
+  ) => void;
+  insertTransaction: (transaction: Transaction) => void;
+  getTransactionById: (
+    id: string,
+    callback: (err: Error | null, rows: Transaction[]) => Promise<void>
+  ) => void;
+}
 
-  if (!bearerHeader) {
-    return res.sendStatus(403);
-  }
+export let transactionDAO: TransactionDAO;
 
-  const bearer = bearerHeader.split(' ');
-  const bearerToken = bearer[1];
-
-  const payload = JSON.parse(
-    Buffer.from(bearerToken.split('.')[1], 'base64').toString()
-  );
-
-  if (Date.now() > payload.exp * 1000) {
-    return res.sendStatus(403);
-  }
-
-  req.headers.token = bearerToken;
-  (req as any).userId = payload.userId; // Assuming userId is in payload
-
-  next();
+export const registerTransactionDAO = (newTransactionDAO: TransactionDAO) => {
+  transactionDAO = newTransactionDAO;
 };
