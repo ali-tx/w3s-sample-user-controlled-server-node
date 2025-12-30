@@ -34,6 +34,10 @@ import {
   faucet as faucetRouter
 } from './routers';
 
+// @ts-expect-ignore
+import contractRoutes from './routers/contract.routes';
+// @ts-expect-ignore
+import usdcRoutes from './routers/usdc.routes';
 export const app: Express = express();
 
 app.use(cors());
@@ -93,6 +97,10 @@ app.use('/api/tokens', tokensRouter);
 app.use('/api/wallets', authMiddleware, walletsRouter);
 app.use('/api/transactions', transactionsRouter, authTransRouter);
 app.use('/api/faucet', authMiddleware, faucetRouter);
+
+// Routes
+app.use('/api/contracts', contractRoutes);
+app.use('/api/usdc', usdcRoutes);
 
 // Error handling
 app.use(errorHandler);
