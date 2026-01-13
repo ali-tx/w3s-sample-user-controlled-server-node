@@ -35,8 +35,8 @@ registerLogger(new SampleServerLogger());
 initDB();
 
 const circleService = new CircleService({
-  circleWalletId: config.CIRCLE_WALLET_ID,
-  circleApiKey: config.CIRCLE_API_KEY
+  circleWalletId: config.CIRCLE_WALLET_ID!,
+  circleApiKey: config.CIRCLE_API_KEY!
 });
 
 // Function to fetch contracts from Circle API
@@ -153,7 +153,7 @@ if (config.START_USDC_WATCHER && config.INFURA_RPC_URL) {
 
 const port = config.PORT ?? 8080;
 const server = app.listen(port, () => {
-  logger.info(`Server is running at http://localhost:${port}`);
+  logger.info(`Server is running at http://demo.monerepay.com:${port}`);
 });
 
 process.on('SIGINT', function () {
