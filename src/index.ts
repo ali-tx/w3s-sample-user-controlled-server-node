@@ -30,6 +30,7 @@ import config from './config';
 import USDCWatcher from './services/usdcWatcher';
 import CircleService from './services/circleService';
 import Web3 from 'web3';
+import circleApiService from './services/external/circleApiService.js';
 
 registerLogger(new SampleServerLogger());
 initDB();
@@ -43,9 +44,6 @@ const circleService = new CircleService({
 async function fetchContracts() {
   let contractData: { id: string; address: string }[] = [];
   try {
-    const circleApiService = await import(
-      './services/external/circleApiService.js'
-    );
     const allContracts: unknown[] = [];
     let page = 1;
     const limit = 100;

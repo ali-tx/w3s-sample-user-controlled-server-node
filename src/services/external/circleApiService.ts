@@ -12,11 +12,11 @@ const client = axios.create({
   }
 });
 
-export async function post(path: string, body: any) {
+export async function post(path: string, body: unknown) {
   return client.post(path, body);
 }
 
-export async function get(path: string, params?: any) {
+export async function get(path: string, params?: Record<string, unknown>) {
   return client.get(path, { params });
 }
 
