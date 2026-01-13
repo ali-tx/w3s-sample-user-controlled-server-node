@@ -30,22 +30,20 @@ import config from './config';
 import USDCWatcher from './services/usdcWatcher';
 import CircleService from './services/circleService';
 import Web3 from 'web3';
+import circleApiService from './services/external/circleApiService.js';
 
 registerLogger(new SampleServerLogger());
 initDB();
 
 const circleService = new CircleService({
-  circleWalletId: config.CIRCLE_WALLET_ID,
-  circleApiKey: config.CIRCLE_API_KEY
+  circleWalletId: config.CIRCLE_WALLET_ID!,
+  circleApiKey: config.CIRCLE_API_KEY!
 });
 
 // Function to fetch contracts from Circle API
 async function fetchContracts() {
   let contractData: { id: string; address: string }[] = [];
   try {
-    const circleApiService = await import(
-      './services/external/circleApiService.js'
-    );
     const allContracts: unknown[] = [];
     let page = 1;
     const limit = 100;
@@ -153,7 +151,7 @@ if (config.START_USDC_WATCHER && config.INFURA_RPC_URL) {
 
 const port = config.PORT ?? 8080;
 const server = app.listen(port, () => {
-  logger.info(`Server is running at http://localhost:${port}`);
+  logger.info(`Server is running at http://demo:${port}`);
 });
 
 process.on('SIGINT', function () {
