@@ -30,7 +30,7 @@ import config from './config';
 import USDCWatcher from './services/usdcWatcher';
 import CircleService from './services/circleService';
 import Web3 from 'web3';
-import circleApiService from './services/external/circleApiService.js';
+import circleApiService from './services/external/circleApiService';
 
 registerLogger(new SampleServerLogger());
 initDB();
@@ -66,9 +66,6 @@ async function fetchContracts() {
     }
     const contracts = allContracts;
     logger.info('Total contracts fetched:', contracts.length);
-    if (contracts.length > 0) {
-      logger.info('First contract:', contracts[0]);
-    }
     contractData = contracts
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((c: any) => {

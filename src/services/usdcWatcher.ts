@@ -155,7 +155,6 @@ export default class USDCWatcher {
                   contractData.address.toLowerCase()
               );
             } catch (error: any) {
-              console.log('USDCWatcher event fetch error', error.message);
               return [];
             }
           }
