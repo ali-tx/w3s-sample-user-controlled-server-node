@@ -51,7 +51,10 @@ export const authenticationSchema = yup.object({
   body: yup
     .object({
       email: yup.string().required(),
-      password: yup.string().required()
+      password: yup.string().required(),
+      name: yup.string().optional(),
+      receiverWalletAddress: yup.string().optional(),
+      feeWalletAddress: yup.string().optional()
     })
     .noUnknown(true)
     .strict()

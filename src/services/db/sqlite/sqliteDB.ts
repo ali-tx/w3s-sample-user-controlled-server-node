@@ -17,10 +17,15 @@
 import { Database } from 'sqlite3';
 import { registerUserDAO } from '../dao';
 import { SqliteUserDAO } from './sqliteUserDAO';
+import { registerContractDAO } from '../dao';
+import { SqliteContractDAO } from './sqliteContractDAO';
 import { logger } from '../../logging/logger';
 
-const client = new Database(process.env.DATABASE_FILENAME ?? ':memory:');
+const DATABASE_FILENAME = process.env.DATABASE_FILENAME || ':memory:';
+const client = new Database(DATABASE_FILENAME);
 const userDAO = new SqliteUserDAO(client);
+const contractDAO = new SqliteContractDAO(client);
+let dbClosed = false;
 
 export const createUserTable = (db: Database) => {
   db.serialize(() => {
@@ -30,17 +35,44 @@ export const createUserTable = (db: Database) => {
   });
 };
 
+export const createContractsTable = (db: Database) => {
+  db.serialize(() => {
+    db.exec(
+      'CREATE TABLE IF NOT EXISTS contracts (id TEXT PRIMARY KEY, userId TEXT, name TEXT, contractAddress TEXT, artifactPath TEXT, status TEXT, walletAddress TEXT, contractId TEXT, createdAt TEXT DEFAULT CURRENT_TIMESTAMP)'
+    );
+    // Add columns if not exists
+    db.run('ALTER TABLE contracts ADD COLUMN walletAddress TEXT', (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding walletAddress column:', err);
+      }
+    });
+  });
+};
+
 export const initDB = () => {
   registerUserDAO(userDAO);
+  registerContractDAO(contractDAO);
   createUserTable(client);
+  createContractsTable(client);
   logger.info('Created users table');
 };
 
 export const cleanupDB = () => {
-  client.close((err) => {
-    if (err) {
-      return logger.error(err.message);
-    }
-    logger.info('Database connection closed successfully');
-  });
+  if (dbClosed) {
+    logger.info('cleanupDB called but DB already closed');
+    return;
+  }
+  dbClosed = true;
+  try {
+    client.close((err) => {
+      if (err) {
+        return logger.error(err.message);
+      }
+      logger.info('Database connection closed successfully');
+    });
+  } catch (err: unknown) {
+    logger.error(
+      'Error closing database: ' + ((err as Error)?.message || String(err))
+    );
+  }
 };

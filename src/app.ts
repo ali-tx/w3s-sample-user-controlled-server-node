@@ -33,6 +33,9 @@ import {
   authTransRouter,
   faucet as faucetRouter
 } from './routers';
+import usdcRoutes from './routes/usdc.routes';
+import contractRoutes from './routes/contract.routes';
+import { contractsRouter } from './routers/contracts';
 
 export const app: Express = express();
 
@@ -93,6 +96,9 @@ app.use('/tokens', tokensRouter);
 app.use('/wallets', authMiddleware, walletsRouter);
 app.use('/transactions', transactionsRouter, authTransRouter);
 app.use('/faucet', authMiddleware, faucetRouter);
+app.use('/contracts', contractsRouter);
+app.use('/usdc', usdcRoutes);
+app.use('/contract', authMiddleware, contractRoutes);
 
 // Error handling
 app.use(errorHandler);

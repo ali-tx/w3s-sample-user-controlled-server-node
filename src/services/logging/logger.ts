@@ -15,24 +15,24 @@
 // limitations under the License.
 
 export interface Logger {
-  info: (message: string) => void;
-  warn: (message: string) => void;
-  error: (message: string) => void;
-  debug: (message: string) => void;
+  info: (message: string, error?: unknown) => void;
+  warn: (message: string, error?: unknown) => void;
+  error: (message: string, error?: unknown) => void;
+  debug: (message: string, error?: unknown) => void;
 }
 
 export class SampleServerLogger implements Logger {
-  info(message: string) {
-    console.log('[SampleServerLogger]: ' + message);
+  info(message: string, error?: unknown) {
+    console.log('[SampleServerLogger]: ' + message, error ? error : '');
   }
-  warn(message: string) {
-    console.log('[SampleServerLogger]: ' + message);
+  warn(message: string, error?: unknown) {
+    console.log('[SampleServerLogger]: ' + message, error ? error : '');
   }
-  error(message: string) {
-    console.log('[SampleServerLogger]: ' + message);
+  error(message: string, error?: unknown) {
+    console.log('[SampleServerLogger]: ' + message, error ? error : '');
   }
-  debug(message: string) {
-    console.log('[SampleServerLogger]: ' + message);
+  debug(message: string, error?: unknown) {
+    console.log('[SampleServerLogger]: ' + message, error ? error : '');
   }
 }
 

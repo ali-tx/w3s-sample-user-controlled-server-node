@@ -16,3 +16,4 @@
 
 export * from './userControlledWalletSdk';
 export * from './db/dao';
+export * from './contracts/contractBuilder';

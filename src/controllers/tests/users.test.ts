@@ -124,8 +124,8 @@ describe('initializeUser', () => {
     const req = getMockReq({
       body: {
         userId: 'mockId',
-        blockchains: ['MATIC-AMOY'],
-        accountType: 'SCA'
+        blockchains: ['ETH-SEPOLIA'],
+        accountType: 'EOA'
       }
     });
     const { res, next } = getMockRes();
@@ -139,8 +139,8 @@ describe('initializeUser', () => {
     const req = getMockReq({
       body: {
         userId: 'mockId',
-        blockchains: ['MATIC-AMOY'],
-        accountType: 'SCA'
+        blockchains: ['ETH-SEPOLIA'],
+        accountType: 'EOA'
       }
     });
     const { res, next } = getMockRes();

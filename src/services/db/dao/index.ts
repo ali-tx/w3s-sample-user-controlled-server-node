@@ -15,3 +15,4 @@
 // limitations under the License.
 
 export * from './userDAO';
+export * from './contractDAO';
