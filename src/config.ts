@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
-import path from 'path';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const config = {
@@ -12,10 +12,15 @@ const config = {
   INFURA_RPC_URL:
     process.env.INFURA_RPC_URL ||
     (process.env.INFURA_API_KEY
-      ? `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`
+      ? `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`
+      : null),
+  INFURA_WS_URL:
+    process.env.INFURA_WS_URL ||
+    (process.env.INFURA_API_KEY
+      ? `wss://mainnet.infura.io/ws/v3/${process.env.INFURA_API_KEY}`
       : null),
   USDC_ADDRESS:
-    process.env.USDC_ADDRESS || '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+    process.env.USDC_ADDRESS || '0xA0b86a33E6441e88C5F2712C3E9b74B8F0fA5Cf9',
   PROCESS_HISTORICAL_TRANSFERS:
     (process.env.PROCESS_HISTORICAL_TRANSFERS || 'false') === 'true',
   START_USDC_WATCHER: (process.env.START_USDC_WATCHER || 'true') === 'true',

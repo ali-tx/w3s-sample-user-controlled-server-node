@@ -22,10 +22,12 @@ async function pollTransfers() {
   if (!web3) return;
   try {
     const latest = await web3.eth.getBlockNumber();
-    const fromBlock: bigint =
-      PROCESS_HISTORICAL && lastBlock === BigInt(0)
-        ? latest - BigInt(1000)
-        : lastBlock + BigInt(1);
+    let fromBlock: bigint;
+    if (lastBlock === BigInt(0)) {
+      fromBlock = PROCESS_HISTORICAL ? (latest > BigInt(1000) ? latest - BigInt(1000) : BigInt(0)) : latest;
+    } else {
+      fromBlock = lastBlock + BigInt(1);
+    }
     if (fromBlock > latest) return;
 
     const transferTopic = web3.utils.sha3(
@@ -33,14 +35,14 @@ async function pollTransfers() {
     ) as string;
     const logs = await web3.eth.getPastLogs({
       address: USDC_ADDRESS as string,
-      fromBlock,
-      toBlock: latest,
+      fromBlock: fromBlock.toString(),
+      toBlock: latest.toString(),
       topics: [transferTopic]
     });
 
     if (logs && logs.length > 0) {
       logger.info(
-        `Detected ${logs.length} USDC logs between ${fromBlock}-${latest}`
+        `Detected ${logs.length} USDC logs between ${fromBlock.toString()}-${latest.toString()}`
       );
       const contracts = await contractDAO.getContractsByUser('%');
 

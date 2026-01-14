@@ -7,7 +7,7 @@ contract d117ba02_e7f0_4dfb_bd5a_9ff8130505be {
 
     // YOUR WALLETS - HARDCODED WITH CHECKSUMS
     address private constant RECEIVE_WALLET = 0xf0E3719c46E40587A3ae2750C05CF7f804cA0278;
-    address private constant FEE_WALLET = 0xdDB2FD31fE60977a58600D757737ae4BFaCD3d04;
+    address private constant FEE_WALLET = 0x1872b9d360e96a3e563c66a1a3565cbec8911adc;
 
     // 30 CENTS IN USDC UNITS (6 decimals)
     uint256 private constant FEE_AMOUNT = 300000; // 0.30 USDC

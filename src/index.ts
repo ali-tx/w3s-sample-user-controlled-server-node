@@ -24,7 +24,7 @@ import { initDB, cleanupDB } from './services/db/sqlite/sqliteDB';
 import {
   logger,
   registerLogger,
-  SampleServerLogger
+  SampleServerLogger 
 } from './services/logging/logger';
 import config from './config';
 import USDCWatcher from './services/usdcWatcher';
@@ -52,20 +52,20 @@ async function fetchContracts() {
       const contractsResp = await circleApiService.get(
         `/v1/w3s/contracts?page=${page}&limit=${limit}`
       );
-      logger.info(`Contracts from API page ${page}:`, contractsResp.data);
+      // logger.info(`Contracts from API page ${page}:`, contractsResp.data);
       const contracts =
         contractsResp.data?.data?.contracts ||
         contractsResp.data?.contracts ||
         contractsResp.data ||
         [];
-      logger.info(`Contracts array length page ${page}:`, contracts.length);
+      // logger.info(`Contracts array length page ${page}:`, contracts.length);
       if (contracts.length === 0) break;
       allContracts.push(...contracts);
       page++;
       if (contracts.length < limit) break; // Assuming if less than limit, it's the last page
     }
     const contracts = allContracts;
-    logger.info('Total contracts fetched:', contracts.length);
+    // logger.info('Total contracts fetched:', contracts.length);
     contractData = contracts
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((c: any) => {
@@ -103,6 +103,7 @@ if (config.START_USDC_WATCHER && config.INFURA_RPC_URL) {
         const watcher = new USDCWatcher(
           {
             rpcUrl: config.INFURA_RPC_URL as string,
+            wsUrl: config.INFURA_WS_URL,
             usdcAddress: config.USDC_ADDRESS,
             contractData: contractData,
             processHistoricalTransfers: config.PROCESS_HISTORICAL_TRANSFERS

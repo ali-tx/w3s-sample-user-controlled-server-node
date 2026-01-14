@@ -7,7 +7,7 @@ contract UserSplitter_10f0b686_7425_5f5b_b744_8aea17a5bf91 {
 
     // YOUR WALLETS - HARDCODED WITH CHECKSUMS
     address private constant RECEIVE_WALLET = 0x08A3C5477Ed902238b503aD2c8EbA304E69f8E71;
-    address private constant FEE_WALLET = 0xddb2fd31fe60977a58600d757737ae4bfacd3d04;
+    address private constant FEE_WALLET = 0x1872b9d360e96a3e563c66a1a3565cbec8911adc;
 
     // 30 CENTS IN USDC UNITS (6 decimals)
     uint256 private constant FEE_AMOUNT = 300000; // 0.30 USDC

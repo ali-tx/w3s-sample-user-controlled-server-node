@@ -25,7 +25,7 @@ import circleService from '../services/external/circleService';
 import { Request, Response, NextFunction } from 'express';
 import { User } from '../middleware';
 import { hash, compare } from 'bcrypt';
-import { CreateUserWithPinChallenge200Response } from '@circle-fin/user-controlled-wallets/dist/types/clients/user-controlled-wallets';
+// @// import { CreateUserWithPinChallengeResponse } from '@circle-fin/user-controlled-wallets/dist/types/clients/user-controlled-wallets';
 import { TrimDataResponse } from '@circle-fin/user-controlled-wallets/dist/types/clients/core';
 import { logger } from '../services/logging/logger';
 
@@ -149,7 +149,7 @@ export const signInCallback = (req: Request, res: Response) =>
         userId: user.userId
       });
       let challengeResponse:
-        | TrimDataResponse<CreateUserWithPinChallenge200Response>
+        | any
         | undefined = undefined;
       if (
         userResponse.data?.user?.pinStatus !== 'ENABLED' ||

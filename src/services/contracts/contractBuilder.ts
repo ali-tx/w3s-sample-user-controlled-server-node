@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import axios from 'axios';
 import { logger } from '../logging/logger';
 import config from '../../config';
@@ -57,7 +57,9 @@ export const createContractForUser = async (
     );
     modified = modified.replace(
       /address\s+private\s+constant\s+FEE_WALLET\s*=\s*[^;]+;/m,
-      `address private constant FEE_WALLET = 0xdDB2FD31fE60977a58600D757737ae4BFaCD3d04;`
+      `address private constant FEE_WALLET = ${web3.utils.toChecksumAddress(
+        config.FEE_WALLET || '0x1872b9d360e96a3e563c66a1a3565cbec8911adc'
+      )};`
     );
 
     // write to tmp folder
@@ -70,7 +72,9 @@ export const createContractForUser = async (
     const builderUrl = config.CONTRACT_BUILDER_URL;
     if (builderUrl) {
       try {
-        const feeWalletAddress = '0xdDB2FD31fE60977a58600D757737ae4BFaCD3d04';
+        const feeWalletAddress = web3.utils.toChecksumAddress(
+          config.FEE_WALLET || '0x1872b9d360e96a3e563c66a1a3565cbec8911adc'
+        );
         const url = `${builderUrl.replace(/\/$/, '')}/deploy`;
         const resp = await axios.post(url, {
           userId,

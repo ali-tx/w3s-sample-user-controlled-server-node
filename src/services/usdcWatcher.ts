@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import Web3 from 'web3';
 import Web3HttpProvider from 'web3-providers-http';
+import Web3WsProvider from 'web3-providers-ws';
 import type { Contract } from 'web3-eth-contract';
 
 type ContractData = {
@@ -20,6 +21,7 @@ export default class USDCWatcher {
   config: WatcherConfig;
   circleService: any;
   web3!: Web3;
+  wsWeb3: Web3 | null = null;
   usdcContract: Contract<any> | null = null;
   isRunning = false;
   subscriptions: any[] = [];
@@ -29,6 +31,7 @@ export default class USDCWatcher {
   eventsDetected = 0;
   splitsExecuted = 0;
   lastChecked: string | null = null;
+  processedTxs = new Set<string>();
 
   private usdcABI = [
     {
@@ -50,10 +53,24 @@ export default class USDCWatcher {
     }
   ];
 
+  private async retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3, baseDelay = 1000): Promise<T> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        if (attempt === maxRetries - 1) throw error;
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`USDCWatcher: RPC request failed (likely rate limit or network issue), retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error('Should not reach here');
+  }
+
   constructor(config: WatcherConfig, circleService: any) {
     this.config = config;
     this.circleService = circleService;
-    // Web3 will be initialized in start() with HTTP provider
+    // Web3 will be initialized in start() with HTTP or WS provider
   }
 
   async start() {
@@ -61,20 +78,24 @@ export default class USDCWatcher {
     console.log('USDCWatcher starting...');
     try {
       console.log('Initializing Web3 with providers');
-      console.log('Using HTTP provider');
+      console.log('Using HTTP provider for polling');
       this.web3 = new Web3(new Web3HttpProvider(this.config.rpcUrl) as any);
       this.usdcContract = new (this.web3.eth.Contract as any)(
         this.usdcABI,
         this.config.usdcAddress
       );
-      let currentBlock = await this.web3.eth.getBlockNumber();
+      if (this.config.wsUrl) {
+        console.log('Using WebSocket provider for subscriptions');
+        this.wsWeb3 = new Web3(new Web3WsProvider(this.config.wsUrl) as any);
+      }
+      let currentBlock = await this.retryWithBackoff(() => this.web3.eth.getBlockNumber());
       this.lastBlock = currentBlock;
       console.log('Got initial current block:', currentBlock.toString());
 
-      currentBlock = await this.web3.eth.getBlockNumber();
+      currentBlock = await this.retryWithBackoff(() => this.web3.eth.getBlockNumber());
       const blocksPerDay = Math.floor((24 * 60 * 60) / 12);
       this.lastBlock =
-        currentBlock > BigInt(3600) ? currentBlock - BigInt(3600) : BigInt(0);
+        currentBlock > BigInt(100) ? currentBlock - BigInt(100) : BigInt(0);
       console.log(
         'Set lastBlock for initial scan to:',
         this.lastBlock.toString()
@@ -84,8 +105,8 @@ export default class USDCWatcher {
       if (this.config.processHistoricalTransfers) {
         try {
           this.lastBlock =
-            currentBlock > BigInt(172800)
-              ? currentBlock - BigInt(172800)
+            currentBlock > BigInt(86400)
+              ? currentBlock - BigInt(86400)
               : BigInt(0);
           console.log(
             'Processing historical transfers from block:',
@@ -100,12 +121,19 @@ export default class USDCWatcher {
         }
       }
 
+      // Set up WebSocket monitoring if WS URL is provided
+      if (this.config.wsUrl) {
+        await this.setupWebSocketMonitoring();
+        console.log('WebSocket monitoring set up for real-time transfers');
+      }
+
       this.isRunning = true;
+      const pollInterval = this.config.wsUrl ? 60000 : 10000; // 60s if WS, 10s if HTTP
       this.interval = setInterval(() => {
         this.checkForTransfers().catch((err) =>
           console.log('USDCWatcher poll error', err.message)
         );
-      }, 10000);
+      }, pollInterval);
     } catch (err: any) {
       console.error('Failed to start USDCWatcher', err);
       throw err;
@@ -116,7 +144,7 @@ export default class USDCWatcher {
     try {
       if (!this.config.contractData || this.config.contractData.length === 0)
         return;
-      const currentBlock = await this.web3.eth.getBlockNumber();
+      const currentBlock = await this.retryWithBackoff(() => this.web3.eth.getBlockNumber());
       console.log(
         `USDCWatcher polling: current block ${currentBlock}, last checked ${this.lastBlock}`
       );
@@ -130,38 +158,33 @@ export default class USDCWatcher {
         } contracts`
       );
 
-      const chunkSize = 100;
+      const chunkSize = 200;
       let fromBlock: bigint = this.lastBlock + BigInt(1);
       const allEvents: any[] = [];
 
       while (fromBlock <= currentBlock) {
         const toBlock: bigint = fromBlock + BigInt(chunkSize) - BigInt(1);
         const actualToBlock = toBlock > currentBlock ? currentBlock : toBlock;
-        const transferPromises = this.config.contractData!.map(
-          async (contractData) => {
-            try {
-              // Get all Transfer events from USDC contract in the block range
-              const events = await (this.usdcContract as any).getPastEvents(
-                'Transfer',
-                {
-                  fromBlock: fromBlock.toString(),
-                  toBlock: actualToBlock.toString()
-                }
-              );
-              // Filter events where to address matches the contract
-              return events.filter(
-                (event: any) =>
-                  event.returnValues.to.toLowerCase() ===
-                  contractData.address.toLowerCase()
-              );
-            } catch (error: any) {
-              return [];
-            }
-          }
-        );
-
-        const eventArrays = await Promise.all(transferPromises);
-        allEvents.push(...eventArrays.flat());
+        try {
+          // Get all Transfer events from USDC contract in the block range
+          const events: any[] = await this.retryWithBackoff(() =>
+            (this.usdcContract as any).getPastEvents('Transfer', {
+              fromBlock: fromBlock.toString(),
+              toBlock: actualToBlock.toString()
+            })
+          );
+          // Filter events where to address matches any contract
+          const relevantEvents = events.filter((event: any) =>
+            this.config.contractData!.some(
+              (contractData) =>
+                event.returnValues.to.toLowerCase() ===
+                contractData.address.toLowerCase()
+            )
+          );
+          allEvents.push(...relevantEvents);
+        } catch (error: any) {
+          // Continue to next chunk
+        }
         fromBlock = actualToBlock + BigInt(1);
       }
 
@@ -172,19 +195,22 @@ export default class USDCWatcher {
         for (const event of allEvents) {
           await this.processTransfer(event);
         }
+      } else {
+        console.log('USDCWatcher: No transfer events found in this check');
       }
 
       this.lastBlock = currentBlock;
       this.lastChecked = new Date().toISOString();
     } catch (error: any) {
       console.log(
-        'USDCWatcher error in checkForTransfers:',
-        error.message || error
+        'USDCWatcher: Failed to check for transfers after retries (RPC issues), will retry in next poll cycle'
       );
     }
   }
 
   async processTransfer(event: any) {
+    if (this.processedTxs.has(event.transactionHash)) return;
+    this.processedTxs.add(event.transactionHash);
     const { from, to, value } = event.returnValues;
     const amount = parseInt(value, 10);
     this.eventsDetected++;
@@ -204,11 +230,14 @@ export default class USDCWatcher {
   }
 
   async setupWebSocketMonitoring() {
-    const contractData = this.config.contractData || [];
-    if (contractData.length === 0) return;
+    if (!this.wsWeb3 || !this.config.contractData || this.config.contractData.length === 0) return;
     this.subscriptions = [];
-    for (const contract of contractData) {
-      const subscription = (this.usdcContract as any).events.Transfer({
+    const wsContract = new (this.wsWeb3.eth.Contract as any)(
+      this.usdcABI,
+      this.config.usdcAddress
+    );
+    for (const contract of this.config.contractData) {
+      const subscription = wsContract.events.Transfer({
         filter: { to: contract.address },
         fromBlock: 'latest'
       });
@@ -245,6 +274,9 @@ export default class USDCWatcher {
     }
     if (this.web3 && (this.web3.currentProvider as any)?.disconnect) {
       (this.web3.currentProvider as any).disconnect();
+    }
+    if (this.wsWeb3 && (this.wsWeb3.currentProvider as any)?.disconnect) {
+      (this.wsWeb3.currentProvider as any).disconnect();
     }
     this.isRunning = false;
   }
