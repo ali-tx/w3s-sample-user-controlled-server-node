@@ -15,13 +15,66 @@
 // limitations under the License.
 
 import { UUID, randomUUID } from 'crypto';
-import { circleUserSdk, userDAO } from '../services';
+import {
+  circleUserSdk,
+  userDAO,
+  contractDAO,
+  createContractForUser
+} from '../services';
+import circleService from '../services/external/circleService';
 import { Request, Response, NextFunction } from 'express';
 import { User } from '../middleware';
 import { hash, compare } from 'bcrypt';
-import { CreateUserWithPinChallenge200Response } from '@circle-fin/user-controlled-wallets/dist/types/clients/user-controlled-wallets';
+// @// import { CreateUserWithPinChallengeResponse } from '@circle-fin/user-controlled-wallets/dist/types/clients/user-controlled-wallets';
 import { TrimDataResponse } from '@circle-fin/user-controlled-wallets/dist/types/clients/core';
 import { logger } from '../services/logging/logger';
+
+async function pollContractStatus(
+  circleContractId: string,
+  id: string,
+  userId: string,
+  name: string,
+  artifactPath: string,
+  walletAddress: string | null
+) {
+  const maxPolls = 300; // 2.5 hours if polling every 30s
+  let polls = 0;
+  const pollInterval = setInterval(async () => {
+    try {
+      const contractData = await circleService.getContract(circleContractId);
+      if (contractData.status === 'COMPLETE') {
+        clearInterval(pollInterval);
+        // Update DB
+        contractDAO.insertContract({
+          id,
+          userId,
+          name,
+          contractAddress: contractData.contractAddress || contractData.address,
+          artifactPath,
+          status: 'deployed',
+          walletAddress,
+          contractId: circleContractId
+        });
+      } else if (polls >= maxPolls) {
+        clearInterval(pollInterval);
+        // Update status to failed
+        contractDAO.insertContract({
+          id,
+          userId,
+          name,
+          artifactPath,
+          status: 'failed',
+          walletAddress,
+          contractId: circleContractId
+        });
+      }
+      polls++;
+    } catch (err) {
+      console.error('Polling error', err);
+      clearInterval(pollInterval);
+    }
+  }, 30000);
+}
 
 export const signUpCallback = (req: Request, res: Response) =>
   async function (err: Error | null, rows: User[]) {
@@ -41,9 +94,10 @@ export const signUpCallback = (req: Request, res: Response) =>
       });
       const challengeResponse = await circleUserSdk.createUserPinWithWallets({
         userId: newUserId,
-        blockchains: ['MATIC-AMOY'],
-        accountType: 'SCA'
+        blockchains: ['ETH-SEPOLIA'],
+        accountType: 'EOA'
       });
+
       // insert User into DB
       userDAO.insertUser(
         newUserId,
@@ -53,6 +107,7 @@ export const signUpCallback = (req: Request, res: Response) =>
       logger.info(
         `New user inserted into DB, userId: ${newUserId}, email: ${req.body.email}`
       );
+
       res.status(200).send({
         userId: newUserId,
         userToken: tokenResponse.data?.userToken,
@@ -94,7 +149,7 @@ export const signInCallback = (req: Request, res: Response) =>
         userId: user.userId
       });
       let challengeResponse:
-        | TrimDataResponse<CreateUserWithPinChallenge200Response>
+        | any
         | undefined = undefined;
       if (
         userResponse.data?.user?.pinStatus !== 'ENABLED' ||
@@ -103,10 +158,78 @@ export const signInCallback = (req: Request, res: Response) =>
         // when user has not enabled their PIN or security questions yet
         challengeResponse = await circleUserSdk.createUserPinWithWallets({
           userId: user.userId,
-          blockchains: ['MATIC-AMOY'],
-          accountType: 'SCA'
+          blockchains: ['ETH-SEPOLIA'],
+          accountType: 'EOA'
         });
       }
+
+      // Create contract if pin enabled and no contract
+      if (
+        userResponse.data?.user?.pinStatus === 'ENABLED' &&
+        userResponse.data?.user?.securityQuestionStatus === 'ENABLED'
+      ) {
+        try {
+          const existingContracts = await contractDAO.getContractsByUser(
+            user.userId
+          );
+          if (existingContracts.length === 0) {
+            if (tokenResponse.data?.userToken) {
+              const listResp = await circleUserSdk.listWallets({
+                userToken: tokenResponse.data.userToken
+              });
+              const latestWallet = listResp.data?.wallets?.[0];
+              if (latestWallet) {
+                const result = await createContractForUser(
+                  user.userId,
+                  `${user.userId}`,
+                  latestWallet.address,
+                  tokenResponse.data.userToken
+                );
+                if (result.artifactPath) {
+                  const cid = `${user.userId}-${Date.now()}`;
+                  let status = 'compiled';
+                  if (result.deployed && result.contractAddress) {
+                    status = 'deployed';
+                  } else if (result.circleContractId) {
+                    status = 'pending';
+                    // Start polling
+                    pollContractStatus(
+                      result.circleContractId,
+                      cid,
+                      user.userId,
+                      `${user.userId}`,
+                      result.artifactPath!,
+                      latestWallet.address
+                    );
+                  }
+                  await contractDAO.insertContract({
+                    id: cid,
+                    userId: user.userId,
+                    name: `${user.userId}`,
+                    contractAddress: result.contractAddress || null,
+                    artifactPath: result.artifactPath,
+                    status,
+                    walletAddress: latestWallet.address,
+                    contractId: result.circleContractId || null
+                  });
+                  logger.info(
+                    `Contract created for user ${user.userId}: ${
+                      result.contractAddress || 'compiled'
+                    }`
+                  );
+                } else
+                  logger.warn(`Contract not created for user ${user.userId}`);
+              }
+            }
+          }
+        } catch (err) {
+          logger.error(
+            `Failed to create contract for user ${user.userId}`,
+            err
+          );
+        }
+      }
+
       res.status(200).send({
         userId: user.userId,
         userToken: tokenResponse.data?.userToken,
